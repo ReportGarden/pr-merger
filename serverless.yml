@@ -1,0 +1,21 @@
+service: pr-merger
+
+provider:
+  name: aws
+  runtime: python3.6
+  region: us-west-2
+  stage: dev
+
+functions:
+  hello:
+    handler: index.main
+    name: ${self:provider.stage}-pr-merger
+    timeout: 10
+    environment:
+      GITHUB_TOKEN: ${env:GITHUB_TOKEN}
+      APPROVALS_REQUIRED: 2
+    events:
+      - http:
+          path: pr-merger/webhook
+          method: post
+          integration: lambda
