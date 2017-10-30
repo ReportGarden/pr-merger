@@ -3,7 +3,7 @@ import os
 import sys
 import boto3
 import requests
-from helpers import is_approved, save_pr_info, filter_checks, merge_pr, comment_on_pr, add_label
+from helpers import is_approved, save_pr_info, filter_checks, merge_pr, comment_on_pr
 
 DEFAULT_CHECKS = os.environ['CHECKS'].split(",")
 MERGE_LABEL = os.environ['MERGE_LABEL']
