@@ -5,6 +5,7 @@ import boto3
 import requests
 
 APPROVALS_REQUIRED = int(os.environ['APPROVALS_REQUIRED'])
+DYNAMODB_TABLE = os.environ['DYNAMODB_TABLE']
 
 TOKEN = os.environ['GITHUB_TOKEN']
 headers = {"Authorization": "token " + TOKEN}
@@ -28,9 +29,9 @@ def is_approved(pr):
 def merge_pr(self_url):
     merge_request = requests.put(self_url + "/merge", headers=headers)
 
-    return merge_request.status_code == 204
+    return merge_request.status_code == 200
 
-def save_pr_info(sha, pr_url, checks):
+def save_pr_info(sha, pr_url, pr_number, checks, is_failed=False, retry_count=0):
     item = {
         "sha": {
             "S": sha
@@ -38,26 +39,48 @@ def save_pr_info(sha, pr_url, checks):
         "pr_url": {
             "S": pr_url
         },
-        "requisite_checks": {
-            "SS": checks
+        "pr_number": {
+            "N": str(pr_number)
+        },
+        "is_failed": {
+            "BOOL": is_failed
+        },
+        "retry_count": {
+            "N": str(retry_count)
         }
     }
+    if checks:
+        item["requisite_checks"] = {
+            "SS": checks
+        }
+
     print("Saving")
     print(item)
     dynamodb = boto3.client('dynamodb')
-    dynamodb.put_item(TableName="prs_to_be_merged", Item=item)
+    dynamodb.put_item(TableName=DYNAMODB_TABLE, Item=item)
 
 def get_pr_info(sha):
     dynamodb = boto3.client('dynamodb')
-    resp = dynamodb.get_item(TableName="prs_to_be_merged", Key={"sha":{"S": sha}})
+    resp = dynamodb.get_item(TableName=DYNAMODB_TABLE, Key={"sha":{"S": sha}})
     if resp["ResponseMetadata"]["HTTPStatusCode"] != 200 or "Item" not in resp:
         print("Unable to find fetch the PR with sha " + sha)
         print(resp)
         return None
 
     pr_url = resp["Item"]["pr_url"]["S"]
+    pr_number = resp["Item"]["pr_number"]["S"]
+    retry_count = resp["Item"]["retry_count"]["N"]
     requisite_checks = resp["Item"]["requisite_checks"]["SS"]
-    return {"sha": sha, "pr_url": pr_url, "requisite_checks": requisite_checks}
+    return {"sha": sha, "pr_url": pr_url, "pr_number": pr_number, "requisite_checks": requisite_checks}
+
+def delete_pr_info(sha):
+    key = {
+        "sha": {
+            "S": sha
+        }
+    }
+    dynamodb = boto3.client('dynamodb')
+    dynamodb.delete_item(TableName=DYNAMODB_TABLE, Key=key)
 
 def filter_checks(pr, default_checks):
     checks = list(default_checks)
@@ -77,3 +100,16 @@ def comment_on_pr(pr, comment):
     comment_url = pr["_links"]["comments"]["href"]
     resp = requests.post(comment_url, json=comment, headers=headers)
     print(resp)
+
+def update_branch(pr_url):
+    pr_data = requests.get(pr_url, headers=headers)
+    base_sha = pr_data["base"]["sha"]
+    head_branch = pr_data["head"]["ref"]
+
+    data = {
+       "head": base_sha,
+       "base": head_branch
+    }
+    merge_url = pr_data["head"]["repo"]["merges_url"]
+    merge_request = requests.post(merge_url, json=data, headers=headers)
+    return merge_request.status_code == 201

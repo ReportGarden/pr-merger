@@ -3,7 +3,7 @@ import os
 import sys
 import boto3
 import requests
-from helpers import merge_pr, save_pr_info, get_pr_info
+from helpers import merge_pr, save_pr_info, get_pr_info, delete_pr_info
 
 DEFAULT_CHECKS = os.environ['CHECKS'].split(",")
 
@@ -19,4 +19,5 @@ def hook(payload):
 		print("No pr for the sha " + before_sha)
 		return 0
 
-	save_pr_info(pr_url=item["pr_url"], sha=after_sha, checks=DEFAULT_CHECKS)
+	delete_pr_info(sha=before_sha)
+	save_pr_info(pr_url=item["pr_url"], pr_number=item["pr_number"], sha=after_sha, checks=DEFAULT_CHECKS, retry_count=item["retry_count"])

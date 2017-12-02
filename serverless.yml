@@ -5,15 +5,17 @@ provider:
   runtime: python3.6
   region: us-west-2
   stage: dev
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
   iamRoleStatements:
   - Effect: Allow
     Action:
       - dynamodb:GetItem
       - dynamodb:PutItem
-    Resource: arn:aws:dynamodb:*:*:*
+    Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
 
 functions:
-  hello:
+  pr-merger:
     handler: index.main
     name: ${self:provider.stage}-pr-merger
     timeout: 10
@@ -27,3 +29,22 @@ functions:
           path: pr-merger/webhook
           method: post
           integration: lambda
+
+resources:
+  Resources:
+    TodosDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: sha
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: sha
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 3
+          WriteCapacityUnits: 3
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}

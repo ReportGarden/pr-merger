@@ -28,6 +28,7 @@ def hook(payload):
 		return
 
 	url = item["pr_url"]
+	pr_number = item["pr_number"]
 	requisite_checks = item["requisite_checks"]
 	sha = item["sha"]
 
@@ -41,6 +42,7 @@ def hook(payload):
 			print("Merged the PR")
 		else:
 			print("Failed  merging")
+			save_pr_info(checks=[], sha=sha, pr_number=pr_number, pr_url=url, is_failed=True)
 	else:
 		print("Requisite check present. Updating the item")
-		save_pr_info(checks=requisite_checks, sha=sha, pr_url=url)
+		save_pr_info(checks=requisite_checks, sha=sha, pr_number=pr_number, pr_url=url)
