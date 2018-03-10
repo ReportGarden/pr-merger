@@ -46,6 +46,7 @@ def hook(payload):
 		if merge_pr(pr_url):
 			print("Merged " + pr_url)
 		else:
+			print("adding failed comment")
 			comment = {
 				"body": "Merge failed (You may have to update the PR manually)"
 			}

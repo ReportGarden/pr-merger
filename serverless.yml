@@ -4,7 +4,7 @@ provider:
   name: aws
   runtime: python3.6
   region: us-west-2
-  stage: dev
+  stage: development
   environment:
     DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
   iamRoleStatements:
@@ -12,6 +12,7 @@ provider:
     Action:
       - dynamodb:GetItem
       - dynamodb:PutItem
+      - dynamodb:DeleteItem
     Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
 
 functions:
@@ -36,10 +37,29 @@ resources:
       Type: 'AWS::DynamoDB::Table'
       DeletionPolicy: Retain
       Properties:
+        GlobalSecondaryIndexes:
+          -
+            IndexName: pr_number
+            KeySchema:
+              -
+                AttributeName: sha
+                KeyType: HASH
+              -
+                AttributeName: pr_number
+                KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 2
+              WriteCapacityUnits: 2
+
         AttributeDefinitions:
           -
             AttributeName: sha
             AttributeType: S
+          -
+            AttributeName: pr_number
+            AttributeType: N
         KeySchema:
           -
             AttributeName: sha

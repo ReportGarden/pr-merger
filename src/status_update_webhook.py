@@ -29,17 +29,33 @@ def hook(payload):
 
 	url = item["pr_url"]
 	pr_number = item["pr_number"]
-	requisite_checks = item["requisite_checks"]
 	sha = item["sha"]
 
+	if "requisite_checks" not in item:
+		print("No requiresite checks for PR " + url)
+		return 0
+
+	requisite_checks = item["requisite_checks"]
+
 	print(item)
+
+	if check not in requisite_checks:
+		print(check + " check not mandatory, returning")
+		return 0
 
 	requisite_checks.remove(check)
 
 	if not requisite_checks:
 		print("Attempting to merge the pr " + url)
 		if merge_pr(url):
+			# delete_pr_info(sha=sha)
 			print("Merged the PR")
+			# response = table.query(
+			# 	IndexName = "pr_number",
+			# 	Limit = 1,
+			# 	ScanIndexForward = False
+			# 	)
+			# print(response)
 		else:
 			print("Failed  merging")
 			save_pr_info(checks=[], sha=sha, pr_number=pr_number, pr_url=url, is_failed=True)

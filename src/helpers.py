@@ -68,10 +68,15 @@ def get_pr_info(sha):
         return None
 
     pr_url = resp["Item"]["pr_url"]["S"]
-    pr_number = resp["Item"]["pr_number"]["S"]
+    pr_number = resp["Item"]["pr_number"]["N"]
     retry_count = resp["Item"]["retry_count"]["N"]
-    requisite_checks = resp["Item"]["requisite_checks"]["SS"]
-    return {"sha": sha, "pr_url": pr_url, "pr_number": pr_number, "requisite_checks": requisite_checks}
+    if "requisite_checks" in resp["Item"]:
+        requisite_checks = resp["Item"]["requisite_checks"]["SS"]
+    else:
+        requisite_checks = []
+
+    return {"sha": sha, "pr_url": pr_url, "pr_number": pr_number, "requisite_checks": requisite_checks, "retry_count": retry_count
+    }
 
 def delete_pr_info(sha):
     key = {
